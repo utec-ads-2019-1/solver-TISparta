@@ -63,7 +63,7 @@ private:
   void computePositions (std::vector <std::vector <int>>& row, Operation op);
   void buildTree ();
   void build (int l, int r, Node*& cur);
-  int findNearestOperation (int l, int r, Operation op);
+  int findNextOperation (int l, int r, Operation op);
   double eval (Node* cur);
 
 public:

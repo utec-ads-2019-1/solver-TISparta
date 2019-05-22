@@ -12,10 +12,24 @@ void Tester::execute() {
     "19+-+++-++++++9",
     "((7*3)/4+6*(3^2)/2)*(-1)",
     "(5+-3)+(21/3*5)-(5^3-2)",
-    "((19--45/16*100-(181^2-15*10)))" // Faltaba poner un paréntesis al final
+    "((19--45/16*100-(181^2-15*10)))", // Faltaba poner un paréntesis al final
+    // Extras
+    "(0)",
+    "+10",
+    "10/0",
+    "3 + 5 * 2",
+    "20-16/4",
+    "60-30/3*5+7",
+    "900/(6+3*8)-10",
+    "4-3 * (20 - 3 * 4 - (2 + 4))/2",
+    "6 / (3) * (2)",
+    "14+28/2^2",
+    "3^2*2^3",
+    "3*5^-3/7",
+    "(3 + 4) ^ 2 + (8) * (4)"
   };
 
-  float results[] = {
+  double results[] = {
     24,
     -18,
     5,
@@ -25,7 +39,21 @@ void Tester::execute() {
     28,
     -32.25,
     -86,
-    -32310.75
+    -32310.75,
+    // Extras
+    0,
+    10,
+    0, // Error: Division by zero,
+    13,
+    16,
+    17,
+    20,
+    1,
+    4,
+    21,
+    72,
+    0.0034,
+    81
   };
 
   const unsigned int size = sizeof(equations) / sizeof(string);
@@ -34,9 +62,9 @@ void Tester::execute() {
     try {
       Equation* root = Equation::buildFromEquation(equations[i]);
       cout << "Equivalence -> " << root -> getEquivalence() << endl;
-      float respuesta = root -> eval();
-      ASSERT(fabs(respuesta == results[i]) < 1e-6, "The solver is not working");
-      cout << "Equation(" << i + 1 << ") solved" << endl;
+      double respuesta = root -> eval();
+      if (not (fabs(respuesta - results[i]) < 1e-3)) cout <<  "The solver is not working" << endl;
+      else cout << "Equation(" << i + 1 << ") solved" << endl;
     } catch (char const* msg) {
       cerr << msg << endl;
     }

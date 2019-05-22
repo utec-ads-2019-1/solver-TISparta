@@ -24,7 +24,7 @@ using namespace std;
 
 class Tester {
 public:
-  static void execute();
+  static void execute ();
 };
 
 #endif

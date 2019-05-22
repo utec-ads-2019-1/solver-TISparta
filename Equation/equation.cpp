@@ -124,25 +124,32 @@ void Equation::createArray () {
   }
 }
 
-// -x = (-1) * x
+// -x = ((-1) * x)
 // +x = x
 void Equation::transformUnaryOperations () {
   vector <Element> newArray;
   Element prev;
   prev.type = Type::LEFT_PARENTHESIS;
+  Element rightParenthesis;
+  rightParenthesis.type = Type::RIGHT_PARENTHESIS;
+  int add = 0;
   for (Element cur: array) {
     if (cur.isOperation()) {
       if (prev.isLeftParenthesis() or prev.isOperation() or prev.isOperation()) { // Unary operation
         if (cur.op == Operation::ADD) {} // unary +
         else if (cur.op == Operation::SUB) { // unary -
-          Element minus1;
+          Element leftParenthesis; // (
+          leftParenthesis.type = Type::LEFT_PARENTHESIS;
+          newArray.push_back(leftParenthesis);
+          Element minus1; // -1
           minus1.type = Type::VALUE;
           minus1.val = -1;
           newArray.push_back(minus1);
           Element mul;
           mul.type = Type::OPERATION;
-          mul.op = Operation::MUL;
+          mul.op = Operation::MUL; // *
           newArray.push_back(mul);
+          add = 2;
         } else throw "Invalid use of unary operations";
       } else {
         newArray.push_back(cur);
@@ -150,6 +157,8 @@ void Equation::transformUnaryOperations () {
     } else {
       newArray.push_back(cur);
     }
+    if (add == 1) newArray.push_back(rightParenthesis);
+    add = max(0, add - 1);
     prev = cur;
   }
   prev.type = Type::LEFT_PARENTHESIS;
@@ -173,7 +182,7 @@ void Equation::computeLevelAndMatch () {
       pos.push_back(i);
     }
     if (array[i].isRightParenthesis()) {
-      if (open == 0) throw "Invalid use of parenthesis";
+      if (open == 0 or pos.back() == i - 1) throw "Invalid use of parenthesis";
       open--;
       match[pos.back()] = i;
       match[i] = pos.back();
@@ -203,7 +212,7 @@ void Equation::computeOperationsPositions () {
   computePositions(position[4], Operation::POW);
 }
 
-int Equation::findNearestOperation (int l, int r, Operation op) {
+int Equation::findNextOperation (int l, int r, Operation op) {
   int offset = array[l].isLeftParenthesis();
   int searchLevel = level[l] - offset;
   vector <int>& row = position[int(op)][searchLevel];
@@ -218,8 +227,7 @@ int Equation::findNearestOperation (int l, int r, Operation op) {
 void Equation::build (int l, int r, Node*& cur) {
   cur = new Node();
   // (exp)
-  if (array[l].isLeftParenthesis() and array[r].isRightParenthesis() and
-      match[l] == r) {
+  if (array[l].isLeftParenthesis() and array[r].isRightParenthesis() and match[l] == r) {
     build(l + 1, r - 1, cur);
     return;
   }
@@ -228,9 +236,8 @@ void Equation::build (int l, int r, Node*& cur) {
     return;
   }
   // exp1 +- exp2
-  int posAdd = findNearestOperation(l, r, Operation::ADD);
-  int posSub = findNearestOperation(l, r, Operation::SUB);
-  // cout << l << ' ' << r << " ADD-SUB " << posAdd << ' ' << posSub << endl;
+  int posAdd = findNextOperation(l, r, Operation::ADD);
+  int posSub = findNextOperation(l, r, Operation::SUB);
   if (posAdd != -1 and posSub != -1) {
     if (posSub < posAdd) {
       cur -> elem = &array[posAdd];
@@ -256,9 +263,8 @@ void Equation::build (int l, int r, Node*& cur) {
     return;
   }
   // exp1 */ exp2
-  int posMul = findNearestOperation(l, r, Operation::MUL);
-  int posDiv = findNearestOperation(l, r, Operation::DIV);
-  // cout << l << ' ' << r << " MUL-DIV " << posMul << ' ' << posDiv << endl;
+  int posMul = findNextOperation(l, r, Operation::MUL);
+  int posDiv = findNextOperation(l, r, Operation::DIV);
   if (posMul != -1 and posDiv != -1) {
     if (posDiv < posMul) {
       cur -> elem = &array[posMul];
@@ -284,7 +290,7 @@ void Equation::build (int l, int r, Node*& cur) {
     return;
   }
   // exp1 ^ exp2
-  int posPow = findNearestOperation(l, r, Operation::POW);
+  int posPow = findNextOperation(l, r, Operation::POW);
   if (posPow != -1) {
     cur -> elem = &array[posPow];
     build(l, posPow - 1, cur -> left);
@@ -304,7 +310,7 @@ double Equation::eval () {
 
 double Equation::eval (Node* cur) {
   if (not cur -> left and not cur -> right) {
-    if (cur -> elem -> isValue()) return cur -> elem -> isValue();
+    if (cur -> elem -> isValue()) return cur -> elem -> val;
     if (cur -> elem -> isVariable()) {} // TODO
     throw "Something got wrong while evaluating the equation";
   }
