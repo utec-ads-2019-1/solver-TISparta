@@ -12,7 +12,7 @@ void Tester::execute() {
     "19+-+++-++++++9",
     "((7*3)/4+6*(3^2)/2)*(-1)",
     "(5+-3)+(21/3*5)-(5^3-2)",
-    "((19--45/16*100-(181^2-15*10))"
+    "((19--45/16*100-(181^2-15*10)))" // Faltaba poner un paréntesis al final
   };
 
   float results[] = {
@@ -30,15 +30,15 @@ void Tester::execute() {
 
   const unsigned int size = sizeof(equations) / sizeof(string);
   for (int i = 0; i < int(size); ++i) {
-    cout << equations[i] << endl;
+    cout << "Equation -> " << equations[i] << endl;
     try {
       Equation* root = Equation::buildFromEquation(equations[i]);
+      cout << "Equivalence -> " << root -> getEquivalence() << endl;
       float respuesta = root -> eval();
       ASSERT(fabs(respuesta == results[i]) < 1e-6, "The solver is not working");
       cout << "Equation(" << i + 1 << ") solved" << endl;
     } catch (char const* msg) {
       cerr << msg << endl;
     }
-    break;
   }
 }

@@ -1,6 +1,12 @@
 # Solver
 
-# Idea general de la solución
+## Ejecución
+```bash
+make
+./run
+```
+
+## Idea general de la solución
 
 Tenemos esta jerarquía de operaciones:
 

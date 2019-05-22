@@ -50,16 +50,17 @@ private:
   std::string equivalence;
   std::vector <Element> array;
   std::vector <int> level;
-  std::vector <std::vector <std::vector <int>>> nearest; // [operation][position][level]
+  std::vector <int> match;
+  std::vector <std::vector <std::vector <int>>> position; // [operation][level]
   Node* root = 0;
 
   void deleteSpaces ();
   void reduceSigns ();
   void createArray ();
   void transformUnaryOperations ();
-  void computeLevel ();
-  void computeRightNearestOperations ();
-  void computeRightNearest (std::vector <std::vector <int>>& row, Operation op);
+  void computeLevelAndMatch ();
+  void computeOperationsPositions ();
+  void computePositions (std::vector <std::vector <int>>& row, Operation op);
   void buildTree ();
   void build (int l, int r, Node*& cur);
   int findNearestOperation (int l, int r, Operation op);
@@ -67,8 +68,8 @@ private:
 
 public:
   Equation () {}
-  void setEquation (std::string _equation) { equation = _equation; }
   inline std::string getEquation () const { return equation; }
+  inline std::string getEquivalence () const { return equivalence; }
   static Equation* buildFromEquation (std::string equation);
   double eval ();
 };

@@ -8,13 +8,13 @@ using namespace std;
 
 Equation* Equation::buildFromEquation (string equation) {
   Equation* ret = new Equation();
-  ret -> setEquation(equation);
+  ret -> equation = equation;
   ret -> deleteSpaces();
   ret -> reduceSigns();
   ret -> createArray();
   ret -> transformUnaryOperations();
-  ret -> computeLevel();
-  ret -> computeRightNearestOperations();
+  ret -> computeLevelAndMatch();
+  ret -> computeOperationsPositions();
   ret -> buildTree();
   return ret;
 }
@@ -132,7 +132,7 @@ void Equation::transformUnaryOperations () {
   prev.type = Type::LEFT_PARENTHESIS;
   for (Element cur: array) {
     if (cur.isOperation()) {
-      if (prev.isLeftParenthesis() or prev.isOperation()) { // Unary operation
+      if (prev.isLeftParenthesis() or prev.isOperation() or prev.isOperation()) { // Unary operation
         if (cur.op == Operation::ADD) {} // unary +
         else if (cur.op == Operation::SUB) { // unary -
           Element minus1;
@@ -153,7 +153,7 @@ void Equation::transformUnaryOperations () {
     prev = cur;
   }
   prev.type = Type::LEFT_PARENTHESIS;
-  for (Element cur: array) {
+  for (Element cur: newArray) {
     if (cur.isOperation() and prev.isOperation()) {
       throw "Error with unary operations";
     }
@@ -162,49 +162,64 @@ void Equation::transformUnaryOperations () {
   array = newArray;
 }
 
-void Equation::computeLevel () {
+void Equation::computeLevelAndMatch () {
   int open = 0;
   level.assign(sz(array), -1);
+  match.assign(sz(array), -1);
+  vector <int> pos;
   for (int i = 0; i < sz(array); i++) {
-    if (array[i].isLeftParenthesis()) open++;
-    if (array[i].isRightParenthesis()) open--;
-    if (open < 0) throw "Invalid use of parenthesis";
+    if (array[i].isLeftParenthesis()) {
+      open++;
+      pos.push_back(i);
+    }
+    if (array[i].isRightParenthesis()) {
+      if (open == 0) throw "Invalid use of parenthesis";
+      open--;
+      match[pos.back()] = i;
+      match[i] = pos.back();
+      pos.pop_back();
+    }
     level[i] = open;
   }
   if (open != 0) throw "Invalid use of parenthesis";
 }
 
-void Equation::computeRightNearest (vector <vector <int>>& row, Operation op) {
-  if (row.empty()) return;
-  vector <int> near(sz(row[0]), -1);
-  for (int i = sz(array) - 1; i >= 0; i--) {
+void Equation::computePositions (vector <vector <int>> & row, Operation op) {
+  for (int i = 0; i < sz(array); i++) {
     if (array[i].isOperation() and array[i].op == op) {
-      near[level[i]] = i;
+      row[level[i]].push_back(i);
     }
-    row[i] = near;
   }
 }
 
-void Equation::computeRightNearestOperations () {
-  int maxLevel = *max_element(begin(level), end(level));
-  // [operation][position][level]
-  nearest = vector <vector <vector <int>>> (N_OPERATIONS, vector <vector <int>> (sz(array), vector <int> (maxLevel, -1)));
-  computeRightNearest(nearest[0], Operation::ADD);
-  computeRightNearest(nearest[1], Operation::SUB);
-  computeRightNearest(nearest[2], Operation::MUL);
-  computeRightNearest(nearest[3], Operation::DIV);
-  computeRightNearest(nearest[4], Operation::POW);
+void Equation::computeOperationsPositions () {
+  int maxLevel = *max_element(begin(level), end(level)) + 1;
+  // [operation][level]
+  position = vector <vector <vector <int>>> (N_OPERATIONS, vector <vector <int>> (maxLevel, vector <int> ()));
+  computePositions(position[0], Operation::ADD);
+  computePositions(position[1], Operation::SUB);
+  computePositions(position[2], Operation::MUL);
+  computePositions(position[3], Operation::DIV);
+  computePositions(position[4], Operation::POW);
 }
 
 int Equation::findNearestOperation (int l, int r, Operation op) {
-  int pos = nearest[int(op)][l][level[l]];
+  int offset = array[l].isLeftParenthesis();
+  int searchLevel = level[l] - offset;
+  vector <int>& row = position[int(op)][searchLevel];
+  if (row.empty()) return -1;
+  if (r < row.front()) return -1;
+  int pos = -1;
+  if (row.back() <= r) pos = row.back();
+  pos = row[upper_bound(begin(row), end(row), r) - begin(row) - 1];
   return (l <= pos and pos <= r) ? pos : -1;
 }
 
 void Equation::build (int l, int r, Node*& cur) {
   cur = new Node();
   // (exp)
-  if (array[l].isLeftParenthesis() and array[r].isRightParenthesis()) {
+  if (array[l].isLeftParenthesis() and array[r].isRightParenthesis() and
+      match[l] == r) {
     build(l + 1, r - 1, cur);
     return;
   }
@@ -215,8 +230,9 @@ void Equation::build (int l, int r, Node*& cur) {
   // exp1 +- exp2
   int posAdd = findNearestOperation(l, r, Operation::ADD);
   int posSub = findNearestOperation(l, r, Operation::SUB);
+  // cout << l << ' ' << r << " ADD-SUB " << posAdd << ' ' << posSub << endl;
   if (posAdd != -1 and posSub != -1) {
-    if (posAdd < posSub) {
+    if (posSub < posAdd) {
       cur -> elem = &array[posAdd];
       build(l, posAdd - 1, cur -> left);
       build(posAdd + 1, r, cur -> right);
@@ -242,8 +258,9 @@ void Equation::build (int l, int r, Node*& cur) {
   // exp1 */ exp2
   int posMul = findNearestOperation(l, r, Operation::MUL);
   int posDiv = findNearestOperation(l, r, Operation::DIV);
+  // cout << l << ' ' << r << " MUL-DIV " << posMul << ' ' << posDiv << endl;
   if (posMul != -1 and posDiv != -1) {
-    if (posMul < posDiv) {
+    if (posDiv < posMul) {
       cur -> elem = &array[posMul];
       build(l, posMul - 1, cur -> left);
       build(posMul + 1, r, cur -> right);
@@ -274,7 +291,6 @@ void Equation::build (int l, int r, Node*& cur) {
     build(posPow + 1, r, cur -> right);
     return;
   }
-  cout << l << ' ' << r << ' ' << posAdd << ' ' << posSub << ' ' << posMul << ' ' << posDiv << ' ' << posPow << endl;
   throw "Something got wrong building the three";
 }
 
