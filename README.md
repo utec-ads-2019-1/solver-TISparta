@@ -61,3 +61,7 @@ double build(l, r, root):
   op = getNextOperation(l, r)
   return build(l, op - 1) operation[op] build(op + 1, r);
 ```
+
+* Complejidad de construcción: O(n log n)  
+
+* Complejidad de evaluación: O(n log n)  
