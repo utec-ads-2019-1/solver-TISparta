@@ -61,12 +61,33 @@ void Tester::execute() {
     cout << "Equation -> " << equations[i] << endl;
     try {
       Equation* root = Equation::buildFromEquation(equations[i]);
+      cout << "Equation -> " << root -> getEquation() << endl;
       cout << "Equivalence -> " << root -> getEquivalence() << endl;
       double respuesta = root -> eval();
       if (not (fabs(respuesta - results[i]) < 1e-3)) cout <<  "The solver is not working" << endl;
       else cout << "Equation(" << i + 1 << ") solved" << endl;
+      delete root;
     } catch (char const* msg) {
       cerr << msg << endl;
     }
+  }
+  cout << "############################" << endl;
+  vector <string> more_equations = {
+    "7/4*((a+b)*a)+3",
+    "7/4*((a+-+--b)*a)+3",
+    "2+(3)",
+    "7/4*((a+b)^4*a)+3",
+    "a-2*5/2+1-2^4+a",
+    "a+-+++-++++++9",
+    "((7*3)/4+6*(a^2)/b)*(1)"
+  };
+  for (string equation: more_equations) {
+    Equation* root = Equation::buildFromEquation(equation);
+    cout << "Equation -> " << root -> getEquation() << endl;
+    cout << "Equivalence -> " << root -> getEquivalence() << endl;
+    root -> askValues();
+    double respuesta = root -> eval();
+    cout << "Respuesta: " << respuesta << endl;
+    delete root;
   }
 }

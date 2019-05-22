@@ -1,5 +1,6 @@
-#include <bits/stdc++.h>
-
+#include <algorithm>
+#include <cmath>
+#include <iostream>
 #include "equation.hpp"
 
 #define sz(A) int(A.size())
@@ -118,6 +119,7 @@ void Equation::createArray () {
       pair <string, int> pp = getVariable(equivalence, i);
       elem.type = Type::VARIABLE;
       elem.var = pp.first;
+      values[pp.first] = DEFAULT_VALUE;
       i = pp.second;
     } else throw "Invalid equation";
     array.push_back(elem);
@@ -212,6 +214,7 @@ void Equation::computeOperationsPositions () {
   computePositions(position[4], Operation::POW);
 }
 
+// (exp) op (exp) .. 
 int Equation::findNextOperation (int l, int r, Operation op) {
   int offset = array[l].isLeftParenthesis();
   int searchLevel = level[l] - offset;
@@ -224,9 +227,29 @@ int Equation::findNextOperation (int l, int r, Operation op) {
   return (l <= pos and pos <= r) ? pos : -1;
 }
 
+int Equation::getNextOperation (int l, int r) {
+  // exp1 +- exp2
+  int posAdd = findNextOperation(l, r, Operation::ADD);
+  int posSub = findNextOperation(l, r, Operation::SUB);
+  if (posAdd != -1 and posSub != -1) return (posSub < posAdd) ? posAdd : posSub;
+  if (posAdd != -1) return posAdd;
+  if (posSub != -1) return posSub;
+  // exp1 */ exp2
+  int posMul = findNextOperation(l, r, Operation::MUL);
+  int posDiv = findNextOperation(l, r, Operation::DIV);
+  if (posMul != -1 and posDiv != -1) return (posDiv < posMul) ? posMul : posDiv;
+  if (posMul != -1) return posMul;
+  if (posDiv != -1) return posDiv;
+  // exp1 ^ exp2
+  int posPow = findNextOperation(l, r, Operation::POW);
+  if (posPow != -1) return posPow;
+  return -1;
+}
+
+// () op exp op ()
+// (exp)
 void Equation::build (int l, int r, Node*& cur) {
   cur = new Node();
-  // (exp)
   if (array[l].isLeftParenthesis() and array[r].isRightParenthesis() and match[l] == r) {
     build(l + 1, r - 1, cur);
     return;
@@ -235,69 +258,11 @@ void Equation::build (int l, int r, Node*& cur) {
     cur -> elem = &array[l];
     return;
   }
-  // exp1 +- exp2
-  int posAdd = findNextOperation(l, r, Operation::ADD);
-  int posSub = findNextOperation(l, r, Operation::SUB);
-  if (posAdd != -1 and posSub != -1) {
-    if (posSub < posAdd) {
-      cur -> elem = &array[posAdd];
-      build(l, posAdd - 1, cur -> left);
-      build(posAdd + 1, r, cur -> right);
-    } else {
-      cur -> elem = &array[posSub];
-      build(l, posSub - 1, cur -> left);
-      build(posSub + 1, r, cur -> right);
-    }
-    return;
-  }
-  if (posAdd != -1) {
-    cur -> elem = &array[posAdd];
-    build(l, posAdd - 1, cur -> left);
-    build(posAdd + 1, r, cur -> right);
-    return;
-  }
-  if (posSub != -1) {
-    cur -> elem = &array[posSub];
-    build(l, posSub - 1, cur -> left);
-    build(posSub + 1, r, cur -> right);
-    return;
-  }
-  // exp1 */ exp2
-  int posMul = findNextOperation(l, r, Operation::MUL);
-  int posDiv = findNextOperation(l, r, Operation::DIV);
-  if (posMul != -1 and posDiv != -1) {
-    if (posDiv < posMul) {
-      cur -> elem = &array[posMul];
-      build(l, posMul - 1, cur -> left);
-      build(posMul + 1, r, cur -> right);
-    } else {
-      cur -> elem = &array[posDiv];
-      build(l, posDiv - 1, cur -> left);
-      build(posDiv + 1, r, cur -> right);
-    }
-    return;
-  }
-  if (posMul != -1) {
-    cur -> elem = &array[posMul];
-    build(l, posMul - 1, cur -> left);
-    build(posMul + 1, r, cur -> right);
-    return;
-  }
-  if (posDiv != -1) {
-    cur -> elem = &array[posDiv];
-    build(l, posDiv - 1, cur -> left);
-    build(posDiv + 1, r, cur -> right);
-    return;
-  }
-  // exp1 ^ exp2
-  int posPow = findNextOperation(l, r, Operation::POW);
-  if (posPow != -1) {
-    cur -> elem = &array[posPow];
-    build(l, posPow - 1, cur -> left);
-    build(posPow + 1, r, cur -> right);
-    return;
-  }
-  throw "Something got wrong building the three";
+  int pos = getNextOperation(l, r);
+  if (pos == -1 or not array[pos].isOperation()) throw "Something got wrong building the three";
+  cur -> elem = &array[pos];
+  build(l ,pos - 1, cur -> left);
+  build(pos + 1, r, cur -> right);
 }
 
 void Equation::buildTree () {
@@ -311,11 +276,11 @@ double Equation::eval () {
 double Equation::eval (Node* cur) {
   if (not cur -> left and not cur -> right) {
     if (cur -> elem -> isValue()) return cur -> elem -> val;
-    if (cur -> elem -> isVariable()) {} // TODO
+    if (cur -> elem -> isVariable()) return values[cur -> elem -> var];
     throw "Something got wrong while evaluating the equation";
   }
   if (not cur -> elem -> isOperation()) {
-    throw "Something got wrong while evaluating the eqaution";
+    throw "Something got wrong while evaluating the equation";
   }
   if (cur -> elem -> op == Operation::ADD) {
     return eval(cur -> left) + eval(cur -> right);
@@ -333,5 +298,12 @@ double Equation::eval (Node* cur) {
   }
   if (cur -> elem -> op == Operation::POW) {
     return pow(eval(cur -> left), eval(cur -> right));
+  }
+}
+
+void Equation::askValues () {
+  for (pair <string, double> pp: values) {
+    cout << "Inserta el valor de la variable " << pp.first << " : ";
+    cin >> values[pp.first];
   }
 }
