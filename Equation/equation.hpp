@@ -45,11 +45,7 @@ private:
     Node* left = 0;
     Node* right = 0;
     Node () {}
-    ~Node () {
-      /*if (left) delete left;
-      if (right) delete right;
-      delete this;*/
-    }
+    ~Node () {}
   };
 
   std::string equation;
@@ -61,6 +57,7 @@ private:
   std::map <std::string, double> values;
   Node* root = 0;
 
+  void clear (Node*& cur);
   void deleteSpaces ();
   void reduceSigns ();
   void createArray ();
@@ -76,7 +73,7 @@ private:
 
 public:
   Equation () {}
-  ~Equation () { if (root) delete root; }
+  ~Equation () { clear(root); }
   inline std::string getEquation () const { return equation; }
   inline std::string getEquivalence () const { return equivalence; }
   static Equation* buildFromEquation (std::string equation);

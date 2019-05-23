@@ -7,6 +7,14 @@
 
 using namespace std;
 
+void Equation::clear (Node*& cur) {
+  if (not cur) return;
+  if (cur -> left) clear(cur -> left);
+  if (cur -> right) clear(cur -> right);
+  delete cur;
+}
+
+
 Equation* Equation::buildFromEquation (string equation) {
   Equation* ret = new Equation();
   ret -> equation = equation;
